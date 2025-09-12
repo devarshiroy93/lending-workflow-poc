@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "types": ["node"],
+   "rootDir": ".",
     "outDir": "dist",
     "strict": true,
     "skipLibCheck": true
