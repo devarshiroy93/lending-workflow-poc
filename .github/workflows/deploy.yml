@@ -35,13 +35,6 @@ jobs:
         run: |
           zip -r submitApplication.zip dist node_modules package.json
 
-      # 7. Install AWS CLI
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
-
       # 8. Deploy to AWS Lambda
       - name: Deploy to AWS Lambda
         run: |
