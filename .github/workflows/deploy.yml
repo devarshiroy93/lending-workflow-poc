@@ -2,31 +2,47 @@ name: Build and Deploy Lambda
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master" ]   # or "main" if your repo uses main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
+      # 3. Install dependencies (dev + prod)
       - name: Install dependencies
         run: npm install
 
+      # 4. Build TypeScript -> dist/
       - name: Build TypeScript
         run: npm run build
 
+      # 5. Install production-only dependencies (for Lambda package)
+      - name: Install production dependencies
+        run: npm install --only=production
+
+      # 6. Package Lambda (dist + node_modules + package.json)
       - name: Package Lambda
         run: |
-          cd dist
-          zip -r ../submitApplication.zip .
+          zip -r submitApplication.zip dist node_modules package.json
 
+      # 7. Install AWS CLI
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      # 8. Deploy to AWS Lambda
       - name: Deploy to AWS Lambda
         run: |
           aws lambda update-function-code \
@@ -35,4 +51,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
+          AWS_DEFAULT_REGION: eu-east-1   
