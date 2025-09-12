@@ -23,6 +23,7 @@ export const handler = async (
 
     const applicationId = uuidv4();
     const now = new Date().toISOString();
+    const eventId = uuidv4();
 
     // Application record
     const applicationItem = {
@@ -43,7 +44,17 @@ export const handler = async (
       details: { S: JSON.stringify({ amount, userId }) },
     };
 
-    // Transaction: write both records
+    // Outbox record
+    const outboxItem = {
+      eventId: { S: eventId },
+      applicationId: { S: applicationId },
+      eventType: { S: "ApplicationSubmitted" },
+      payload: { S: JSON.stringify({ userId, amount }) },
+      status: { S: "PENDING" },
+      createdAt: { S: now },
+    };
+
+    // Transaction: write all 3 records
     const txn = new TransactWriteItemsCommand({
       TransactItems: [
         {
@@ -56,6 +67,12 @@ export const handler = async (
           Put: {
             TableName: process.env.LOGS_TABLE!,
             Item: logItem,
+          },
+        },
+        {
+          Put: {
+            TableName: process.env.OUTBOX_TABLE!,
+            Item: outboxItem,
           },
         },
       ],
