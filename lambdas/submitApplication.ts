@@ -16,6 +16,9 @@ export const handler = async (
     if (!userId || !amount) {
       return {
         statusCode: 400,
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ message: "Missing userId or amount" }),
       };
     }
@@ -41,6 +44,9 @@ export const handler = async (
 
     return {
       statusCode: 201,
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         message: "Loan application submitted successfully",
         applicationId,
@@ -50,6 +56,9 @@ export const handler = async (
     console.error("Error submitting loan application:", err);
     return {
       statusCode: 500,
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ message: "Internal server error" }),
     };
   }
