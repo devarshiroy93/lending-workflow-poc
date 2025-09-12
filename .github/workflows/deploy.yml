@@ -2,7 +2,7 @@ name: Build and Deploy Lambda
 
 on:
   push:
-    branches: [ "master" ]   # or "main" if your repo uses main
+    branches: [ "master" ]   # change to "main" if that's your branch
 
 jobs:
   deploy:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 18
 
-      # 3. Install dependencies (dev + prod)
+      # 3. Install dependencies
       - name: Install dependencies
         run: npm install
 
@@ -26,16 +26,21 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
-      # 5. Install production-only dependencies (for Lambda package)
+      # 5. Install production-only dependencies
       - name: Install production dependencies
         run: npm install --only=production
 
-      # 6. Package Lambda (dist + node_modules + package.json)
+      # 6. Package Lambda
       - name: Package Lambda
         run: |
-          zip -r submitApplication.zip dist node_modules package.json
+          mkdir package
+          cp dist/lambdas/submitApplication.js package/
+          cp -r node_modules package/
+          cp package.json package/
+          cd package
+          zip -r ../submitApplication.zip .
 
-      # 8. Deploy to AWS Lambda
+      # 7. Deploy to AWS Lambda
       - name: Deploy to AWS Lambda
         run: |
           aws lambda update-function-code \
