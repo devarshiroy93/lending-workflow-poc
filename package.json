@@ -20,6 +20,8 @@
   "homepage": "https://github.com/devarshiroy93/lending-workflow-poc#readme",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.887.0",
+    "@aws-sdk/client-sns": "^3.887.0",
+    "@aws-sdk/util-dynamodb": "^3.887.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

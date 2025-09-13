@@ -1,8 +1,8 @@
-name: Build and Deploy Lambda
+name: Build and Deploy Lambdas
 
 on:
   push:
-    branches: [ "master" ]   # change to "main" if that's your branch
+    branches: ["master"] # change to "main" if that's your branch
 
 jobs:
   deploy:
@@ -30,18 +30,18 @@ jobs:
       - name: Install production dependencies
         run: npm install --only=production
 
-      # 6. Package Lambda
-      - name: Package Lambda
+      # 6. Package SubmitApplication Lambda
+      - name: Package SubmitApplication
         run: |
-          mkdir package
-          cp dist/lambdas/submitApplication.js package/
-          cp -r node_modules package/
-          cp package.json package/
-          cd package
+          mkdir package-submit
+          cp dist/lambdas/submitApplication.js package-submit/
+          cp -r node_modules package-submit/
+          cp package.json package-submit/
+          cd package-submit
           zip -r ../submitApplication.zip .
 
-      # 7. Deploy to AWS Lambda
-      - name: Deploy to AWS Lambda
+      # 7. Deploy SubmitApplication Lambda
+      - name: Deploy SubmitApplication
         run: |
           aws lambda update-function-code \
             --function-name SubmitApplication \
@@ -49,4 +49,25 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1   
+          AWS_DEFAULT_REGION: us-east-1
+
+      # 8. Package OutboxProcessor Lambda
+      - name: Package OutboxProcessor
+        run: |
+          mkdir package-outbox
+          cp dist/lambdas/outboxProcessor.js package-outbox/
+          cp -r node_modules package-outbox/
+          cp package.json package-outbox/
+          cd package-outbox
+          zip -r ../outboxProcessor.zip .
+
+      # 9. Deploy OutboxProcessor Lambda
+      - name: Deploy OutboxProcessor
+        run: |
+          aws lambda update-function-code \
+            --function-name OutboxProcessor \
+            --zip-file fileb://outboxProcessor.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
