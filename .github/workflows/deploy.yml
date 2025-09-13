@@ -2,7 +2,7 @@ name: Build and Deploy Lambdas
 
 on:
   push:
-    branches: ["master"] # change to "main" if that's your branch
+    branches: ["master"] # change to "main" if needed
 
 jobs:
   deploy:
@@ -33,8 +33,8 @@ jobs:
       # 6. Package SubmitApplication Lambda
       - name: Package SubmitApplication
         run: |
-          mkdir package-submit
-          cp dist/lambdas/submitApplication.js package-submit/
+          mkdir -p package-submit/lambdas
+          cp dist/lambdas/submitApplication.js package-submit/lambdas/
           cp -r node_modules package-submit/
           cp package.json package-submit/
           cd package-submit
@@ -54,8 +54,8 @@ jobs:
       # 8. Package OutboxProcessor Lambda
       - name: Package OutboxProcessor
         run: |
-          mkdir package-outbox
-          cp dist/lambdas/outboxProcessor.js package-outbox/
+          mkdir -p package-outbox/lambdas
+          cp dist/lambdas/outboxProcessor.js package-outbox/lambdas/
           cp -r node_modules package-outbox/
           cp package.json package-outbox/
           cd package-outbox
