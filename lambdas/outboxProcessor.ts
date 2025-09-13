@@ -48,7 +48,10 @@ export const handler = async (event: DynamoDBStreamEvent) => {
             await ddb.send(
                 new UpdateItemCommand({
                     TableName: process.env.OUTBOX_TABLE!,
-                    Key: { eventId: { S: outboxItem.eventId } },
+                    Key: {
+                        eventId: { S: outboxItem.eventId },
+                        createdAt: { S: outboxItem.createdAt }  // 🔑 include sort key
+                    },
                     UpdateExpression: "SET #s = :processed, processedAt = :now",
                     ConditionExpression: "#s = :pending",
                     ExpressionAttributeNames: { "#s": "status" },
@@ -59,6 +62,7 @@ export const handler = async (event: DynamoDBStreamEvent) => {
                     },
                 })
             );
+
 
             console.log(`Successfully processed eventId=${outboxItem.eventId}`);
         } catch (err) {
