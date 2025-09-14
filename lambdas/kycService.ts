@@ -1,5 +1,5 @@
 import { SQSEvent } from "aws-lambda";
-import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, PutItemCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 
 const ddb = new DynamoDBClient({});
 
@@ -8,17 +8,17 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 
   for (const record of event.Records) {
     try {
-      // Step 1: Parse SNS wrapper (SQS delivers SNS messages as string in record.body)
+      // Step 1: Parse SNS → SQS message
       const snsEnvelope = JSON.parse(record.body);
-      const message = JSON.parse(snsEnvelope.Message); // business payload
+      const message = JSON.parse(snsEnvelope.Message);
 
       console.log("Processing KYC for:", message);
 
       const { applicationId, payload, eventId } = message;
-
-      // Step 2: Simulate KYC check (mock business logic)
-      const kycStatus = "KYC_PASSED"; // or randomly fail if you want
       const now = new Date().toISOString();
+
+      // Step 2: Mock KYC result
+      const kycStatus = "KYC_PASSED"; // you can randomize PASS/FAIL for demo
 
       // Step 3: Append to LoanApplicationLogs
       await ddb.send(
@@ -34,15 +34,26 @@ export const handler = async (event: SQSEvent): Promise<void> => {
         })
       );
 
-      // Step 4: (Optional) Update LoanApplications status
-      // e.g., mark application as "UNDER_REVIEW" or "KYC_PASSED"
+      // Step 4: Update LoanApplications table with latest status
+      await ddb.send(
+        new UpdateItemCommand({
+          TableName: process.env.APPLICATIONS_TABLE!,
+          Key: { applicationId: { S: applicationId } },
+          UpdateExpression: "SET #s = :status, updatedAt = :now",
+          ExpressionAttributeNames: { "#s": "status" },
+          ExpressionAttributeValues: {
+            ":status": { S: kycStatus },
+            ":now": { S: now },
+          },
+        })
+      );
 
       console.log(
-        `KYC processed for applicationId=${applicationId}, status=${kycStatus}`
+        `KYC processed: applicationId=${applicationId}, status=${kycStatus}`
       );
     } catch (err: any) {
       console.error("Error processing record:", record, err);
-      // Failures → message remains in SQS, retried or moved to DLQ if configured
+      // Failed messages stay in SQS → retried or sent to DLQ if configured
     }
   }
 };
