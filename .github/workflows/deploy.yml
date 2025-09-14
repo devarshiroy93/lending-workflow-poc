@@ -71,3 +71,24 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
+
+      # 10. Package KYCService Lambda
+      - name: Package KYCService
+        run: |
+          mkdir -p package-kyc/lambdas
+          cp dist/lambdas/kycService.js package-kyc/lambdas/
+          cp -r node_modules package-kyc/
+          cp package.json package-kyc/
+          cd package-kyc
+          zip -r ../kycService.zip .
+
+      # 11. Deploy KYCService Lambda
+      - name: Deploy KYCService
+        run: |
+          aws lambda update-function-code \
+            --function-name KYCService \
+            --zip-file fileb://kycService.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
