@@ -92,3 +92,24 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
+
+      # 12. Package ComplianceService Lambda
+      - name: Package ComplianceService
+        run: |
+          mkdir -p package-compliance/lambdas
+          cp dist/lambdas/complianceService.js package-compliance/lambdas/
+          cp -r node_modules package-compliance/
+          cp package.json package-compliance/
+          cd package-compliance
+          zip -r ../complianceService.zip .
+
+      # 13. Deploy ComplianceService Lambda
+      - name: Deploy ComplianceService
+        run: |
+          aws lambda update-function-code \
+            --function-name ComplianceService \
+            --zip-file fileb://complianceService.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
