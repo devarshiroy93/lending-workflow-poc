@@ -18,7 +18,7 @@ export const handler = async (event: SQSEvent): Promise<void> => {
       const now = new Date().toISOString();
 
       // Step 2: Mock KYC result
-      const kycStatus = "KYC_PASSED"; // you can randomize PASS/FAIL for demo
+     const kycStatus = Math.random() < 0.6 ? "KYC_PASSED" : "KYC_FAILED";
 
       // Step 3: Append to LoanApplicationLogs
       await ddb.send(
