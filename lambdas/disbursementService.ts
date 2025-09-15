@@ -7,7 +7,7 @@ const TABLE_APPLICATIONS = process.env.TABLE_APPLICATIONS;
 const TABLE_LOGS = process.env.TABLE_LOGS;
 const TOPIC_ARN = process.env.TOPIC_ARN;
 
-export const handler = async (event :any) => {
+export const handler = async (event: any) => {
   console.log("Received event:", JSON.stringify(event, null, 2));
 
   for (const record of event.Records) {
@@ -46,10 +46,9 @@ export const handler = async (event :any) => {
             Put: {
               TableName: TABLE_LOGS,
               Item: {
-                logId: { S: `${applicationId}-${Date.now()}` },
-                applicationId: { S: applicationId },
+                applicationId: { S: applicationId },               // ✅ PK
+                logTimestamp: { S: new Date().toISOString() },     // ✅ SK
                 eventType: { S: newEvent },
-                timestamp: { S: new Date().toISOString() },
               },
             },
           },
