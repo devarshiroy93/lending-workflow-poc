@@ -113,3 +113,24 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
+
+      # 14. Package NotificationService Lambda
+      - name: Package NotificationService
+        run: |
+          mkdir -p package-notification/lambdas
+          cp dist/lambdas/notificationService.js package-notification/lambdas/
+          cp -r node_modules package-notification/
+          cp package.json package-notification/
+          cd package-notification
+          zip -r ../notificationService.zip .
+
+      # 15. Deploy NotificationService Lambda
+      - name: Deploy NotificationService
+        run: |
+          aws lambda update-function-code \
+            --function-name NotificationService \
+            --zip-file fileb://notificationService.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
