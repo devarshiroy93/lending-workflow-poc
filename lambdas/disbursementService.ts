@@ -1,36 +1,41 @@
+// disbursementService.ts (or .js after build)
 import { DynamoDBClient, TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
 const dynamo = new DynamoDBClient({});
 const sns = new SNSClient({});
-const TABLE_APPLICATIONS = process.env.TABLE_APPLICATIONS;
-const TABLE_LOGS = process.env.TABLE_LOGS;
-const TOPIC_ARN = process.env.TOPIC_ARN;
+const TABLE_APPLICATIONS = process.env.TABLE_APPLICATIONS!;
+const TABLE_LOGS = process.env.TABLE_LOGS!;
+const TOPIC_ARN = process.env.TOPIC_ARN!;
 
 export const handler = async (event: any) => {
   console.log("Received event:", JSON.stringify(event, null, 2));
 
   for (const record of event.Records) {
     try {
-      // Step 1: Parse SQS body (SNS envelope)
+      // Parse SQS body (SNS envelope) -> business message
       const snsEnvelope = JSON.parse(record.body);
-
-      // Step 2: Parse the actual business message
       const message = JSON.parse(snsEnvelope.Message);
 
-      const { eventType, applicationId } = message;
+      const { eventType, applicationId, payload } = message;
 
       if (eventType !== "CompliancePassed") {
         console.log("Ignoring irrelevant event:", eventType);
         continue;
       }
 
-      // Step 3: Mock disbursement (random outcome)
-      const success = Math.random() > 0.3; // 70% chance success
+      // Mock disbursement
+      const success = Math.random() > 0.3; // 70% success
       const newStatus = success ? "DISBURSED" : "DISBURSEMENT_FAILED";
-      const newEvent = success ? "DisbursementSuccess" : "DisbursementFailed";
+      const publishEvent = success ? "DisbursementSuccess" : "DisbursementFailed";
 
-      // Step 4: Transactional write (update LoanApplications + insert LoanApplicationLogs)
+      // Log fields per your required schema
+      const action = success ? "DISBURSEMENT_SUCCESS" : "DISBURSEMENT_FAILED";
+      const actor = "DisbursementService";
+      const logTimestamp = new Date().toISOString();
+      const details = JSON.stringify(payload ?? {});
+
+      // Transaction: update application status + write audit log (with correct keys)
       const transactCmd = new TransactWriteItemsCommand({
         TransactItems: [
           {
@@ -46,31 +51,34 @@ export const handler = async (event: any) => {
             Put: {
               TableName: TABLE_LOGS,
               Item: {
-                applicationId: { S: applicationId },               // ✅ PK
-                logTimestamp: { S: new Date().toISOString() },     // ✅ SK
-                eventType: { S: newEvent },
+                applicationId: { S: applicationId },
+                logTimestamp: { S: logTimestamp },
+                action: { S: action },
+                actor: { S: actor },
+                details: { S: details },
               },
             },
           },
         ],
       });
+
       await dynamo.send(transactCmd);
 
-      // Step 5: Publish new event to SNS
+      // Publish outcome event
       await sns.send(new PublishCommand({
         TopicArn: TOPIC_ARN,
         Message: JSON.stringify({
-          eventType: newEvent,
+          eventType: publishEvent,
           applicationId,
-          timestamp: new Date().toISOString(),
+          timestamp: logTimestamp,
         }),
         MessageAttributes: {
-          eventType: { DataType: "String", StringValue: newEvent },
+          eventType: { DataType: "String", StringValue: publishEvent },
           applicationId: { DataType: "String", StringValue: applicationId },
         },
       }));
 
-      console.log(`✅ Processed Disbursement for ${applicationId} → ${newEvent}`);
+      console.log(`✅ Processed Disbursement for ${applicationId} → ${publishEvent}`);
     } catch (err) {
       console.error("❌ Error processing record:", err);
     }
