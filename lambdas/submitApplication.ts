@@ -22,6 +22,7 @@ export const handler = async (
     let parsedBody: any;
     try {
       parsedBody = JSON.parse(event.body);
+      console.log("Parsed body:", parsedBody);
     } catch (parseErr) {
       return {
         statusCode: 400,
