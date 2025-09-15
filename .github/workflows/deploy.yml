@@ -134,3 +134,24 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
+
+      # 16. Package DisbursementService Lambda
+      - name: Package DisbursementService
+        run: |
+          mkdir -p package-disbursement/lambdas
+          cp dist/lambdas/disbursementService.js package-disbursement/lambdas/
+          cp -r node_modules package-disbursement/
+          cp package.json package-disbursement/
+          cd package-disbursement
+          zip -r ../disbursementService.zip .
+
+      # 17. Deploy DisbursementService Lambda
+      - name: Deploy DisbursementService
+        run: |
+          aws lambda update-function-code \
+            --function-name DisbursementService \
+            --zip-file fileb://disbursementService.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
