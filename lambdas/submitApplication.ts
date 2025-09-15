@@ -7,11 +7,30 @@ const ddb = new DynamoDBClient({});
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  try {
-    console.log("Incoming event:", JSON.stringify(event));
+  console.log("Incoming event:", JSON.stringify(event));
 
-    const body = event.body ? JSON.parse(event.body) : {};
-    const { userId, amount } = body;
+  try {
+    // Parse body safely
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Request body is required" }),
+      };
+    }
+
+    let parsedBody: any;
+    try {
+      parsedBody = JSON.parse(event.body);
+    } catch (parseErr) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Invalid JSON in request body" }),
+      };
+    }
+
+    const { userId, amount } = parsedBody;
 
     if (!userId || !amount) {
       return {
@@ -41,7 +60,7 @@ export const handler = async (
       logTimestamp: { S: now },
       action: { S: "SUBMITTED" },
       actor: { S: "LoanSubmissionService" },
-      details: { S: JSON.stringify({ amount, userId }) },
+      details: { S: JSON.stringify({ userId, amount }) },
     };
 
     // Outbox record
@@ -89,7 +108,8 @@ export const handler = async (
       }),
     };
   } catch (err: any) {
-    console.error("Error submitting loan application:", err);
+    console.error(" Error submitting loan application:", err);
+
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
