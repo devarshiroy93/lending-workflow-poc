@@ -38,7 +38,7 @@ export const handler = async (
     // Query LoanApplications GSI by userId
     const query = new QueryCommand({
       TableName: process.env.APPLICATIONS_TABLE!,
-      IndexName: "userId-index", // 👈 make sure this GSI exists
+      IndexName: "userid-index", // 👈 make sure this GSI exists
       KeyConditionExpression: "userId = :uid",
       ExpressionAttributeValues: {
         ":uid": { S: userId },
