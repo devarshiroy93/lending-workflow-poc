@@ -6,7 +6,7 @@ const ddb = new DynamoDBClient({});
 const corsHeaders = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,X-User-Id",
+  "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,X-User-Id,x-user-id",
   "Access-Control-Allow-Methods": "OPTIONS,GET",
 };
 
@@ -25,9 +25,14 @@ export const handler = async (
       };
     }
 
-    // Get userId from header
-    const userId = event.headers?.["x-user-id"] || event.headers?.["X-User-Id"];
+    // Normalize headers to lowercase
+    const headers = Object.fromEntries(
+      Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+    );
+
+    const userId = headers["x-user-id"];
     if (!userId) {
+      console.warn("Missing x-user-id header. Headers received:", headers);
       return {
         statusCode: 400,
         headers: corsHeaders,
@@ -35,10 +40,10 @@ export const handler = async (
       };
     }
 
-    // Query LoanApplications GSI by userId
+    // Query LoanApplications by userId using GSI
     const query = new QueryCommand({
       TableName: process.env.APPLICATIONS_TABLE!,
-      IndexName: "userId-index", // 👈 make sure this GSI exists
+      IndexName: "userId-index", // 👈 must exist in DynamoDB
       KeyConditionExpression: "userId = :uid",
       ExpressionAttributeValues: {
         ":uid": { S: userId },
