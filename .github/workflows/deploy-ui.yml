@@ -5,8 +5,8 @@ on:
     branches:
       - master   # or "main" if that's your default branch
     paths:
-      - 'ui/**'         # only run when files in ui/ change
-      - '.github/workflows/deploy-ui.yml'  # also run if this workflow file changes
+      - 'ui/**'                               # only run when files in /ui change
+      - '.github/workflows/deploy-ui.yml'     # also run if this workflow file changes
 
 jobs:
   build-deploy:
@@ -32,8 +32,15 @@ jobs:
       - name: Build app
         working-directory: ./ui
         run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
-      # 5. Deploy to Firebase Hosting
+      # 5. Install Firebase CLI
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      # 6. Deploy to Firebase Hosting
       - name: Deploy to Firebase
         working-directory: ./ui
-        run: npx firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
+        run: firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
