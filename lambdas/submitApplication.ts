@@ -10,7 +10,17 @@ export const handler = async (
   console.log("Incoming event:", JSON.stringify(event));
 
   try {
-    // Parse body safely
+    // Get userId from header
+    const userId = event.headers?.["x-user-id"] || event.headers?.["X-User-Id"];
+    if (!userId) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Missing x-user-id header" }),
+      };
+    }
+
+    // Parse body
     if (!event.body) {
       return {
         statusCode: 400,
@@ -22,25 +32,24 @@ export const handler = async (
     let parsedBody: any;
     try {
       parsedBody = JSON.parse(event.body);
-      console.log("Parsed body:", parsedBody);
-    } catch (parseErr) {
+    } catch (err) {
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Invalid JSON in request body" }),
+        body: JSON.stringify({ message: "Invalid JSON in body" }),
       };
     }
 
-    const { userId, amount } = parsedBody;
-
-    if (!userId || !amount) {
+    const { amount } = parsedBody;
+    if (!amount) {
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Missing userId or amount" }),
+        body: JSON.stringify({ message: "Missing amount in body" }),
       };
     }
 
+    // Core IDs
     const applicationId = uuidv4();
     const now = new Date().toISOString();
     const eventId = uuidv4();
@@ -74,27 +83,12 @@ export const handler = async (
       createdAt: { S: now },
     };
 
-    // Transaction: write all 3 records
+    // Transaction write
     const txn = new TransactWriteItemsCommand({
       TransactItems: [
-        {
-          Put: {
-            TableName: process.env.APPLICATIONS_TABLE!,
-            Item: applicationItem,
-          },
-        },
-        {
-          Put: {
-            TableName: process.env.LOGS_TABLE!,
-            Item: logItem,
-          },
-        },
-        {
-          Put: {
-            TableName: process.env.OUTBOX_TABLE!,
-            Item: outboxItem,
-          },
-        },
+        { Put: { TableName: process.env.APPLICATIONS_TABLE!, Item: applicationItem } },
+        { Put: { TableName: process.env.LOGS_TABLE!, Item: logItem } },
+        { Put: { TableName: process.env.OUTBOX_TABLE!, Item: outboxItem } },
       ],
     });
 
@@ -110,7 +104,6 @@ export const handler = async (
     };
   } catch (err: any) {
     console.error(" Error submitting loan application:", err);
-
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
