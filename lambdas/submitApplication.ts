@@ -4,18 +4,34 @@ import { v4 as uuidv4 } from "uuid";
 
 const ddb = new DynamoDBClient({});
 
+const corsHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,X-User-Id",
+  "Access-Control-Allow-Methods": "OPTIONS,POST",
+};
+
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   console.log("Incoming event:", JSON.stringify(event));
 
   try {
+    // Handle preflight OPTIONS request
+    if (event.httpMethod === "OPTIONS") {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ message: "CORS preflight OK" }),
+      };
+    }
+
     // Get userId from header
     const userId = event.headers?.["x-user-id"] || event.headers?.["X-User-Id"];
     if (!userId) {
       return {
         statusCode: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
         body: JSON.stringify({ message: "Missing x-user-id header" }),
       };
     }
@@ -24,7 +40,7 @@ export const handler = async (
     if (!event.body) {
       return {
         statusCode: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
         body: JSON.stringify({ message: "Request body is required" }),
       };
     }
@@ -35,7 +51,7 @@ export const handler = async (
     } catch (err) {
       return {
         statusCode: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
         body: JSON.stringify({ message: "Invalid JSON in body" }),
       };
     }
@@ -44,7 +60,7 @@ export const handler = async (
     if (!amount) {
       return {
         statusCode: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
         body: JSON.stringify({ message: "Missing amount in body" }),
       };
     }
@@ -96,17 +112,17 @@ export const handler = async (
 
     return {
       statusCode: 201,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Loan application submitted successfully",
         applicationId,
       }),
     };
-  } catch (err: any) {
-    console.error(" Error submitting loan application:", err);
+  } catch (err) {
+    console.error("Error submitting loan application:", err);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({ message: "Internal server error" }),
     };
   }
