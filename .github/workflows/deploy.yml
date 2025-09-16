@@ -2,7 +2,11 @@ name: Build and Deploy Lambdas
 
 on:
   push:
-    branches: ["master"] # change to "main" if needed
+    branches:
+      - master   # change to "main" if needed
+    paths:
+      - 'lambdas/**'                     # only trigger when files in /lambdas change
+      - '.github/workflows/deploy-lambdas.yml'  # or when this workflow file changes
 
 jobs:
   deploy:

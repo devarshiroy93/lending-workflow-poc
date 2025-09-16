@@ -3,7 +3,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 
 import SubmitApplication from "./pages/SubmitApplication";
-import HowToUse from "./pages/howToUse";
+import HowToUse from "./pages/HowToUse";
 import ApplicationsList from "./pages/ApplicationsList";
 
 export default function App() {
