@@ -11,16 +11,13 @@ export default function SubmitApplication() {
   const [purpose, setPurpose] = useState("");
   const [status, setStatus] = useState<null | string>(null);
 
-  // For now, hardcode headers (later we’ll wire userId from Header dropdown)
-  const userId = "user1";
-  const apiKey = "R6uVAA7rFW1GVhlr5Yl8V28Ksi0HqTon4Hu8Rm4k";
-
+  const userId = import.meta.env.VITE_USER_ID;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("Submitting...");
 
     try {
-      const result: SubmitResponse = await submitApplication(userId, apiKey, {
+      const result: SubmitResponse = await submitApplication(userId, {
         amount,
         purpose,
       });

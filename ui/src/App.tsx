@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 
 import SubmitApplication from "./pages/SubmitApplication";
 import HowToUse from "./pages/howToUse";
+import ApplicationsList from "./pages/ApplicationsList";
 
 export default function App() {
   return (
@@ -16,7 +17,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<SubmitApplication />} />
             <Route path="/how-to-use" element={<HowToUse />} />
-            
+            <Route path="/applications" element={<ApplicationsList />} />
           </Routes>
         </main>
         <Footer />

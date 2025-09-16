@@ -1,0 +1,39 @@
+name: Deploy UI to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - master   # or "main" if that's your default branch
+    paths:
+      - 'ui/**'         # only run when files in ui/ change
+      - '.github/workflows/deploy-ui.yml'  # also run if this workflow file changes
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        working-directory: ./ui
+        run: npm ci
+
+      # 4. Build app
+      - name: Build app
+        working-directory: ./ui
+        run: npm run build
+
+      # 5. Deploy to Firebase Hosting
+      - name: Deploy to Firebase
+        working-directory: ./ui
+        run: npx firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
