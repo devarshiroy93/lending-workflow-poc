@@ -155,3 +155,24 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
+      
+      # 18. Package GetLoanApplications Lambda
+      - name: Package GetLoanApplications
+        run: |
+          mkdir -p package-getapps/lambdas
+          cp dist/lambdas/getLoanApplications.js package-getapps/lambdas/
+          cp -r node_modules package-getapps/
+          cp package.json package-getapps/
+          cd package-getapps
+          zip -r ../getLoanApplications.zip .
+
+      # 19. Deploy GetLoanApplications Lambda
+      - name: Deploy GetLoanApplications
+        run: |
+          aws lambda update-function-code \
+            --function-name GetLoanApplications \
+            --zip-file fileb://getLoanApplications.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1

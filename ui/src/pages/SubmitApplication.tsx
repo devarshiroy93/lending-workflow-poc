@@ -13,7 +13,7 @@ export default function SubmitApplication() {
 
   // For now, hardcode headers (later we’ll wire userId from Header dropdown)
   const userId = "user1";
-  const apiKey = "YOUR_API_KEY_HERE";
+  const apiKey = "R6uVAA7rFW1GVhlr5Yl8V28Ksi0HqTon4Hu8Rm4k";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
