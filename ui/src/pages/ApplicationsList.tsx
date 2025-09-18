@@ -160,9 +160,7 @@ export default function ApplicationsList() {
                         {!timelineLoading && (
                           <>
                             {/* Debug JSON dump */}
-                            <pre className="text-xs text-gray-400 mb-2">
-                              {JSON.stringify(timeline[app.applicationId], null, 2)}
-                            </pre>
+                           
                             {timeline[app.applicationId] &&
                               timeline[app.applicationId].length > 0 && (
                                 <Timeline events={timeline[app.applicationId]} />
