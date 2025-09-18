@@ -25,25 +25,27 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     const startDate = event.queryStringParameters?.startDate;
     const endDate = event.queryStringParameters?.endDate;
 
+    // base condition
     let keyCondition = "applicationId = :appId";
     let expressionValues: Record<string, any> = { ":appId": applicationId };
 
-    if (startDate && endDate) {
-      keyCondition += " AND #ts BETWEEN :start AND :end";
-      expressionValues[":start"] = startDate;
-      expressionValues[":end"] = endDate;
-    }
-
-    const command = new QueryCommand({
+    const params: any = {
       TableName: TABLE_NAME,
       KeyConditionExpression: keyCondition,
-      ExpressionAttributeNames: { "#ts": "timestamp" },
       ExpressionAttributeValues: expressionValues,
       Limit: limit,
       ScanIndexForward: true, // chronological order
-    });
+    };
 
-    const result = await docClient.send(command);
+    // add date filter only if provided
+    if (startDate && endDate) {
+      params.KeyConditionExpression += " AND #ts BETWEEN :start AND :end";
+      params.ExpressionAttributeNames = { "#ts": "timestamp" };
+      params.ExpressionAttributeValues[":start"] = startDate;
+      params.ExpressionAttributeValues[":end"] = endDate;
+    }
+
+    const result = await docClient.send(new QueryCommand(params));
 
     return {
       statusCode: 200,
