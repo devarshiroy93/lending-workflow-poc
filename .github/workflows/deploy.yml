@@ -182,22 +182,23 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
           
       # 20. Package GetLoanApplicationLogs Lambda
-      - name: Package GetLoanApplicationLogs
+      - name: Package GetApplicationLogs
         run: |
           mkdir -p package-getlogs/lambdas
           cp dist/lambdas/getLoanApplicationLogs.js package-getlogs/lambdas/
           cp -r node_modules package-getlogs/
           cp package.json package-getlogs/
           cd package-getlogs
-          zip -r ../getLoanApplicationLogs.zip .
+          zip -r ../GetApplicationLogs.zip .
 
-      # 21. Deploy GetLoanApplicationLogs Lambda
-      - name: Deploy GetLoanApplicationLogs
+      # 21. Deploy GetApplicationLogs Lambda
+      - name: Deploy GetApplicationLogs
         run: |
           aws lambda update-function-code \
             --function-name GetApplicationLogs \
-            --zip-file fileb://getLoanApplicationLogs.zip
+            --zip-file fileb://GetApplicationLogs.zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
+
