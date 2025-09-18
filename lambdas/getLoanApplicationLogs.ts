@@ -17,7 +17,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       };
     }
 
-    // optional query params
     const limit = event.queryStringParameters?.limit
       ? parseInt(event.queryStringParameters.limit, 10)
       : 50;
@@ -25,7 +24,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     const startDate = event.queryStringParameters?.startDate;
     const endDate = event.queryStringParameters?.endDate;
 
-    // base condition
     let keyCondition = "applicationId = :appId";
     let expressionValues: Record<string, any> = { ":appId": applicationId };
 
@@ -34,10 +32,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       KeyConditionExpression: keyCondition,
       ExpressionAttributeValues: expressionValues,
       Limit: limit,
-      ScanIndexForward: true, // chronological order
+      ScanIndexForward: false, // newest first for timeline
     };
 
-    // add date filter only if provided
     if (startDate && endDate) {
       params.KeyConditionExpression += " AND #ts BETWEEN :start AND :end";
       params.ExpressionAttributeNames = { "#ts": "timestamp" };
@@ -47,10 +44,29 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     const result = await docClient.send(new QueryCommand(params));
 
+    const items = (result.Items ?? []).map((item: any) => {
+      let parsedDetails = item.details;
+      if (typeof parsedDetails === "string") {
+        try {
+          parsedDetails = JSON.parse(parsedDetails);
+        } catch {
+          // leave as string if not valid JSON
+        }
+      }
+
+      return {
+        eventType: item.eventType || item.action, // normalize
+        actor: item.actor || null,
+        timestamp: item.logTimestamp,
+        applicationId: item.applicationId,
+        details: parsedDetails ?? null,
+      };
+    });
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(result.Items ?? []),
+      body: JSON.stringify(items),
     };
   } catch (err) {
     console.error(err);
