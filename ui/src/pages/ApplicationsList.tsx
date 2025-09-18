@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, Fragment } from "react";
 import { apiClient } from "../api/client";
 import StatusChip from "../components/StatusChip";
 import { format } from "date-fns";
+import Timeline from "../components/Timeline";
 
 interface Application {
   applicationId: string;
@@ -15,11 +16,23 @@ interface GetApplicationsResponse {
   applications: Application[];
 }
 
+interface TimelineEvent {
+  eventType: string;
+  actor: string | null;
+  timestamp: string;
+  details?: unknown | null;
+}
+
 export default function ApplicationsList() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const [timeline, setTimeline] = useState<Record<string, TimelineEvent[]>>({});
+  const [timelineLoading, setTimelineLoading] = useState(false);
+
+  const tableRef = useRef<HTMLDivElement>(null);
   const userId = import.meta.env.VITE_USER_ID;
 
   useEffect(() => {
@@ -35,7 +48,6 @@ export default function ApplicationsList() {
           { method: "GET", signal: controller.signal },
           userId
         );
-
         setApplications(data.applications);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -50,11 +62,50 @@ export default function ApplicationsList() {
     return () => controller.abort();
   }, [userId]);
 
+  // Close expanded row when clicking outside the table
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (tableRef.current && !tableRef.current.contains(event.target as Node)) {
+        setOpenRow(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchTimeline = async (appId: string) => {
+    setTimelineLoading(true);
+    try {
+      const data: TimelineEvent[] = await apiClient(
+        `/applications/${appId}/logs`,
+        { method: "GET" },
+        userId
+      );
+      console.log("Fetched timeline for", appId, data);
+      setTimeline((prev) => ({ ...prev, [appId]: data }));
+    } catch (err) {
+      console.error("Failed to fetch timeline", err);
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
+
+  const toggleRow = (appId: string) => {
+    if (openRow === appId) {
+      setOpenRow(null);
+    } else {
+      setOpenRow(appId);
+      if (!timeline[appId]) {
+        fetchTimeline(appId);
+      }
+    }
+  };
+
   if (loading) return <p className="p-4">Loading...</p>;
   if (error) return <p className="p-4 text-red-500">Error: {error}</p>;
 
   return (
-    <div className="p-6 font-montserrat">
+    <div className="p-6 font-montserrat" ref={tableRef}>
       <h1 className="text-xl font-bold mb-4">My Loan Applications</h1>
 
       {applications.length === 0 ? (
@@ -69,31 +120,63 @@ export default function ApplicationsList() {
                 <th className="p-3 border-b">Status</th>
                 <th className="p-3 border-b">Created At</th>
                 <th className="p-3 border-b">Updated At</th>
+                <th className="p-3 border-b">Actions</th>
               </tr>
             </thead>
             <tbody>
               {applications.map((app) => (
-                <tr key={app.applicationId} className="hover:bg-gray-50">
-                  <td className="p-3 border-b break-words max-w-xs">
-                    {app.applicationId}
-                  </td>
-                  <td className="p-3 border-b">
-                    ${app.amount.toLocaleString()}
-                  </td>
-                  <td className="p-3 border-b">
-                    <StatusChip status={app.status} />
-                  </td>
-                  <td className="p-3 border-b">
-                    {app.createdAt
-                      ? format(new Date(app.createdAt), "do MMMM yyyy 'at' HH:mm")
-                      : "-"}
-                  </td>
-                  <td className="p-3 border-b">
-                    {app.updatedAt
-                      ? format(new Date(app.updatedAt), "do MMMM yyyy 'at' HH:mm")
-                      : "-"}
-                  </td>
-                </tr>
+                <Fragment key={app.applicationId}>
+                  <tr className="hover:bg-gray-50">
+                    <td className="p-3 border-b break-words max-w-xs">
+                      {app.applicationId}
+                    </td>
+                    <td className="p-3 border-b">${app.amount.toLocaleString()}</td>
+                    <td className="p-3 border-b">
+                      <StatusChip status={app.status} />
+                    </td>
+                    <td className="p-3 border-b">
+                      {app.createdAt
+                        ? format(new Date(app.createdAt), "do MMMM yyyy 'at' HH:mm")
+                        : "-"}
+                    </td>
+                    <td className="p-3 border-b">
+                      {app.updatedAt
+                        ? format(new Date(app.updatedAt), "do MMMM yyyy 'at' HH:mm")
+                        : "-"}
+                    </td>
+                    <td className="p-3 border-b">
+                      <button
+                        onClick={() => toggleRow(app.applicationId)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {openRow === app.applicationId ? "Hide Timeline" : "View Timeline"}
+                      </button>
+                    </td>
+                  </tr>
+                  {openRow === app.applicationId && (
+                    <tr className="bg-gray-50">
+                      <td colSpan={6} className="p-4">
+                        {timelineLoading && <div>Loading timeline...</div>}
+                        {!timelineLoading && (
+                          <>
+                            {/* Debug JSON dump */}
+                            <pre className="text-xs text-gray-400 mb-2">
+                              {JSON.stringify(timeline[app.applicationId], null, 2)}
+                            </pre>
+                            {timeline[app.applicationId] &&
+                              timeline[app.applicationId].length > 0 && (
+                                <Timeline events={timeline[app.applicationId]} />
+                              )}
+                            {timeline[app.applicationId] &&
+                              timeline[app.applicationId].length === 0 && (
+                                <p className="text-gray-500">No timeline events found.</p>
+                              )}
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

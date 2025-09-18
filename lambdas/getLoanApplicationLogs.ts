@@ -13,10 +13,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     if (!applicationId) {
       return {
         statusCode: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
         body: JSON.stringify({ message: "Missing applicationId in path" }),
       };
     }
 
+    // optional query params
     const limit = event.queryStringParameters?.limit
       ? parseInt(event.queryStringParameters.limit, 10)
       : 50;
@@ -26,52 +31,52 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     let keyCondition = "applicationId = :appId";
     let expressionValues: Record<string, any> = { ":appId": applicationId };
-
-    const params: any = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression: keyCondition,
-      ExpressionAttributeValues: expressionValues,
-      Limit: limit,
-      ScanIndexForward: false, // newest first for timeline
-    };
+    let expressionNames: Record<string, string> = {};
 
     if (startDate && endDate) {
-      params.KeyConditionExpression += " AND #ts BETWEEN :start AND :end";
-      params.ExpressionAttributeNames = { "#ts": "timestamp" };
-      params.ExpressionAttributeValues[":start"] = startDate;
-      params.ExpressionAttributeValues[":end"] = endDate;
+      keyCondition += " AND #ts BETWEEN :start AND :end";
+      expressionValues[":start"] = startDate;
+      expressionValues[":end"] = endDate;
+      expressionNames["#ts"] = "timestamp";
     }
 
-    const result = await docClient.send(new QueryCommand(params));
-
-    const items = (result.Items ?? []).map((item: any) => {
-      let parsedDetails = item.details;
-      if (typeof parsedDetails === "string") {
-        try {
-          parsedDetails = JSON.parse(parsedDetails);
-        } catch {
-          // leave as string if not valid JSON
-        }
-      }
-
-      return {
-        eventType: item.eventType || item.action, // normalize
-        actor: item.actor || null,
-        timestamp: item.logTimestamp,
-        applicationId: item.applicationId,
-        details: parsedDetails ?? null,
-      };
+    const command = new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: keyCondition,
+      ExpressionAttributeNames:
+        Object.keys(expressionNames).length > 0 ? expressionNames : undefined,
+      ExpressionAttributeValues: expressionValues,
+      Limit: limit,
+      ScanIndexForward: true, // chronological order
     });
+
+    const result = await docClient.send(command);
+
+    const events =
+      result.Items?.map((item) => ({
+        eventType: item.action || item.eventType,
+        actor: item.actor ?? null,
+        timestamp: item.timestamp || item.logTimestamp,
+        applicationId: item.applicationId,
+        details: item.details ? JSON.parse(item.details) : null,
+      })) ?? [];
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(items),
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify(events),
     };
   } catch (err) {
     console.error(err);
     return {
       statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
       body: JSON.stringify({ message: "Internal server error" }),
     };
   }
